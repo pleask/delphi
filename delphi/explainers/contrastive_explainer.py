@@ -37,8 +37,13 @@ class ContrastiveExplainer(Explainer):
 
             # Ensure non-activating examples have normalized activations for consistency
             for example in non_activating_examples:
-                if example.normalized_activations is None:
-                    # Use zeros for non-activating examples
+                try:
+                    if example.normalized_activations is None:
+                        # Use zeros for non-activating examples
+                        example.normalized_activations = torch.zeros_like(
+                            example.activations
+                        )
+                except AttributeError:
                     example.normalized_activations = torch.zeros_like(
                         example.activations
                     )

@@ -493,7 +493,7 @@ def faiss_non_activation_windows(
     if activating_embeddings is None:
         logger.info("Computing activating embeddings...")
         activating_embeddings = get_model(embedding_model).encode(
-            activating_texts, show_progress_bar=False
+            activating_texts, show_progress_bar=True
         )
         # Cache the embeddings
         if cache_enabled:

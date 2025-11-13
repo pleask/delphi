@@ -206,11 +206,14 @@ class NeighbourCalculator:
                 )
 
                 for start, end in tqdm(
-                    zip(batch_boundaries[:-1], batch_boundaries[1:])
+                    zip(batch_boundaries[:-1], batch_boundaries[1:]), total=len(batch_boundaries)-1
                 ):
                     # get all ind_cantor values between start and start
                     selected_idx_cantor = idx_cantor[start:end]
                     # shift the indices to start from 0
+                    if len(selected_idx_cantor) == 0:
+                        print("skipping as no selected indices")
+                        continue
                     selected_idx_cantor = selected_idx_cantor - selected_idx_cantor[0]
                     selected_latent_index = latent_index[start:end]
                     number_positions = int(selected_idx_cantor.max().item()) + 1

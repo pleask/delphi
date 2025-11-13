@@ -77,6 +77,7 @@ class IntruderScorer(Classifier):
             n_examples_shown=n_examples_shown,
             temperature=temperature,
             seed=seed,
+            log_prob=False,
             **generation_kwargs,
         )
         self.type = type
@@ -148,7 +149,6 @@ class IntruderScorer(Classifier):
         """
         Prepare and shuffle a list of samples for classification.
         """
-
         assert len(record.not_active) > 0, "No non-activating examples found"
         batches = []
         quantiled_intruder_sentences = self._get_quantiled_examples(record.test)
@@ -173,10 +173,10 @@ class IntruderScorer(Classifier):
             majority_examples = []
             num_active_tokens = 0
             for example in active_examples:
-                text, _str_tokens = _prepare_text(
-                    example, n_incorrect=0, threshold=0.3, highlighted=True
-                )
-                majority_examples.append(text)
+                # text, _str_tokens = _prepare_text(
+                #     example, n_incorrect=0, threshold=0.3, highlighted=True
+                # )
+                majority_examples.append(example)
                 num_active_tokens += (example.activations > 0).sum().item()
 
             avg_active_tokens_per_example = num_active_tokens // len(active_examples)
@@ -187,12 +187,12 @@ class IntruderScorer(Classifier):
                     n_incorrect = 0
                 else:
                     n_incorrect = avg_active_tokens_per_example
-                intruder_sentence, _ = _prepare_text(
-                    intruder,
-                    n_incorrect=n_incorrect,
-                    threshold=0.3,
-                    highlighted=True,
-                )
+                # intruder_sentence, _ = _prepare_text(
+                #     intruder,
+                #     n_incorrect=n_incorrect,
+                #     threshold=0.3,
+                #     highlighted=True,
+                # )
             elif self.type == "internal":
                 # randomly select a quantile to be the intruder, make sure it's not
                 # the same as the source quantile
@@ -205,20 +205,20 @@ class IntruderScorer(Classifier):
                 # to non-activating examples
                 assert intruder.str_tokens is not None, "intruder has no str_tokens"
 
-                non_activating_intruder = NonActivatingExample(
+                intruder = NonActivatingExample(
                     tokens=intruder.tokens,
                     activations=intruder.activations,
                     str_tokens=intruder.str_tokens,
                     distance=intruder.quantile,
                 )
                 # we highlight the correct activating tokens though
-                intruder_sentence, _ = _prepare_text(
-                    non_activating_intruder,
-                    n_incorrect=0,
-                    threshold=0.3,
-                    highlighted=True,
-                )
-                intruder = non_activating_intruder
+                # intruder_sentence, _ = _prepare_text(
+                #     non_activating_intruder,
+                #     n_incorrect=0,
+                #     threshold=0.3,
+                #     highlighted=True,
+                # )
+                # intruder = non_activating_intruder
             else:
                 raise ValueError("Invalid intruder scorer type")
 
@@ -226,7 +226,7 @@ class IntruderScorer(Classifier):
             intruder_index = self.rng.randint(0, num_active_examples)
             examples = (
                 majority_examples[:intruder_index]
-                + [intruder_sentence]
+                + [intruder]
                 + majority_examples[intruder_index:]
             )
 
@@ -235,7 +235,15 @@ class IntruderScorer(Classifier):
 
             batches.append(
                 IntruderSentence(
-                    examples=examples,
+                    examples=[
+                        _prepare_text(
+                            example,
+                            n_incorrect=n_incorrect if (i == intruder_index) else 0,
+                            threshold=0.3,
+                            highlighted=True,
+                        )[0]
+                        for i, example in enumerate(examples)
+                    ],
                     intruder_index=intruder_index,
                     chosen_quantile=active_quantile,
                     activations=example_activations,

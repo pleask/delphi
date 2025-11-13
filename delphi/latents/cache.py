@@ -368,17 +368,22 @@ class LatentCache:
                 # Optimization to reduce the max value to enable a smaller dtype
                 masked_locations[:, 2] = masked_locations[:, 2] - start.item()
 
-                if (
-                    masked_locations[:, 2].max() < 2**16
-                    and masked_locations[:, 0].max() < 2**16
-                ):
-                    masked_locations = masked_locations.astype(np.uint16)
-                else:
-                    masked_locations = masked_locations.astype(np.uint32)
-                    logger.warning(
-                        "Increasing the number of splits might reduce the"
-                        "memory usage of the cache."
-                    )
+                try:
+                    if (
+                        masked_locations[:, 2].max() < 2**16
+                        and masked_locations[:, 0].max() < 2**16
+                    ):
+                        masked_locations = masked_locations.astype(np.uint16)
+                    else:
+                        masked_locations = masked_locations.astype(np.uint32)
+                        logger.warning(
+                            "Increasing the number of splits might reduce the"
+                            "memory usage of the cache."
+                        )
+                except ValueError:
+                    # When we filter latents, masked_locations is empty to .max() errors.
+                    # TODO: Fix this
+                    break
 
                 module_dir = save_dir / module_path
                 module_dir.mkdir(parents=True, exist_ok=True)
